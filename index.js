@@ -2,10 +2,14 @@ const express = require("express");
 const app = express();
 const db = require("./utils/database");
 const { passport } = require("./passport");
+const cors = require("cors");
+
+require("dotenv").config();
+
 const {
   generateToken,
   verifyToken,
-  getUserIdFromEmail,
+  getUserEmailFromId,
 } = require("./utils/jsonWebToken");
 const { authenticationRouter } = require("./routes/authentication");
 const { requireAuth } = require("./middleWare/authenticationMiddleWare");
@@ -17,6 +21,7 @@ const cookieParser = require("cookie-parser");
 // App settings
 //############################
 
+app.use(cors({ origin: "http://localhost:8080" }));
 app.use(cookieParser());
 
 app.use(
@@ -38,7 +43,7 @@ app.use(passport.session());
 //############################
 // Routes and functionality
 //############################
-app.get("/", (req, res) => {
+app.get("/", redirectToLogin, (req, res) => {
   res.send("Hello, World!");
 });
 
@@ -65,7 +70,7 @@ app.get("/test", redirectToLogin, requireAuth, (req, res) => {
 
 app.get("/protected", requireAuth, (req, res) => {
   // find a user by their email
-  getUserIdFromEmail(req.userId, (err, userId) => {
+  getUserEmailFromId(req.userId, (err, userId) => {
     if (err) {
       console.error(err);
       return res.status(500).send("Internal Server Error");

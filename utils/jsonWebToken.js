@@ -1,5 +1,7 @@
 const jwt = require("jsonwebtoken");
+require("dotenv").config();
 const jwtSecret = process.env.JWT_SECRET;
+
 const User = require("../models/User");
 
 function generateToken(user) {
@@ -9,8 +11,9 @@ function generateToken(user) {
   return jwt.sign(payload, jwtSecret, options);
 }
 
-function getUserIdFromEmail(email, callback) {
-  User.findOne({ email }, (err, user) => {
+function getUserEmailFromId(id, callback) {
+  console.log(id);
+  User.findById(id, (err, user) => {
     if (err) {
       return callback(err);
     }
@@ -19,9 +22,9 @@ function getUserIdFromEmail(email, callback) {
       return callback(new Error("User not found"));
     }
 
-    const userId = user._id;
+    const email = user.email;
 
-    callback(null, userId);
+    callback(null, email);
   });
 }
 
@@ -37,4 +40,4 @@ function verifyToken(token, callback) {
   });
 }
 
-module.exports = { generateToken, getUserIdFromEmail, verifyToken };
+module.exports = { generateToken, getUserEmailFromId, verifyToken };

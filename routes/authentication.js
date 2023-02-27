@@ -2,6 +2,8 @@ const express = require("express");
 const authenticationRouter = express.Router();
 const { passport } = require("../passport");
 const path = require("path");
+const bcrypt = require("bcrypt");
+
 const {
   generateToken,
   getUserIdFromEmail,
@@ -21,18 +23,23 @@ authenticationRouter.get("/signup", function (req, res) {
   res.sendFile(filePath);
 });
 
-authenticationRouter.post("/signup", function (req, res) {
-  const email = req.body.email;
-  const password = req.body.password;
-  const newUser = new User({ email: email });
-  User.register(newUser, password, function (err, user) {
-    if (err) {
-      console.error(err);
-      res.redirect("/signup");
-    } else {
-      passport.authenticate("local")(req, res, function () {
-        res.redirect("/");
-      });
+authenticationRouter.post("/signup", (req, res) => {
+  const { email, password } = req.body;
+  console.log(email, password);
+  User.findOne({ email }, async (err, user) => {
+    if (err) return res.status(500).send(err);
+
+    if (user) {
+      return res.status(400).send("User with this email already exists");
+    }
+
+    try {
+      const newUser = new User({ email, password });
+      console.log(newUser);
+      await newUser.save();
+      res.status(201).send("User created successfully");
+    } catch (err) {
+      res.status(400).send(err.message);
     }
   });
 });
@@ -45,18 +52,31 @@ authenticationRouter.get("/login", function (req, res) {
   res.sendFile(filePath);
 });
 
-authenticationRouter.post("/login", (req, res, next) => {
-  passport.authenticate("local", (err, user, info) => {
-    if (err) return next(err);
-    if (!user)
-      return res.status(401).json({ message: "Invalid email or password" });
+authenticationRouter.post("/login", async (req, res) => {
+  const { email, password } = req.body;
 
-    const token = generateToken(user);
-    console.log(token);
+  try {
+    const user = await User.findOne({ email }).select("+password");
+    if (!user) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const saltRounds = await bcrypt.getRounds(user.password);
+
+    const isMatch = await bcrypt.compare(password, user.password);
+
+    if (!isMatch) {
+      return res.status(401).json({ message: "Invalid email or password" });
+    }
+
+    const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
+
     res.cookie("token", token, { httpOnly: true });
-    res.status(200).send({ message: "Login successful" });
-    // res.status(200).json({ token: token });
-  })(req, res, next);
+    res.status(200).json({ token });
+  } catch (findOneError) {
+    console.error(findOneError);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 module.exports = { authenticationRouter };
