@@ -21,7 +21,13 @@ const cookieParser = require("cookie-parser");
 // App settings
 //############################
 
-app.use(cors({ origin: "http://localhost:8080" }));
+app.use(
+  cors({
+    origin: ["http://localhost:8080", "http://localhost:8081"],
+    credentials: true
+  })
+);
+
 app.use(cookieParser());
 
 app.use(
@@ -43,28 +49,11 @@ app.use(passport.session());
 //############################
 // Routes and functionality
 //############################
-app.get("/", redirectToLogin, (req, res) => {
+app.get("/", requireAuth, (req, res) => {
   res.send("Hello, World!");
 });
 
-function redirectToLogin(req, res, next) {
-  const token = req.cookies.token;
-
-  if (!token) {
-    res.redirect("/login");
-  } else {
-    verifyToken(token, function (err, decoded) {
-      if (err) {
-        res.redirect("/login");
-      } else {
-        req.userId = decoded.userId;
-        next();
-      }
-    });
-  }
-}
-
-app.get("/test", redirectToLogin, requireAuth, (req, res) => {
+app.get("/test", requireAuth, (req, res) => {
   res.send("This is a protected route");
 });
 

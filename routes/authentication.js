@@ -70,13 +70,24 @@ authenticationRouter.post("/login", async (req, res) => {
     }
 
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET);
-
-    res.cookie("token", token, { httpOnly: true });
+    console.log('token: ', token);
+    res.cookie("token", token, { httpOnly: true, domain: "localhost" });
     res.status(200).json({ token });
   } catch (findOneError) {
     console.error(findOneError);
     res.status(500).json({ message: "Server error" });
   }
 });
+
+//############################
+// Logout (remove authentication cookie)
+//############################
+authenticationRouter.get("/logout", (req, res) => {
+  // Clear the token cookie
+  res.clearCookie("token");
+  // Redirect to the login page
+  res.redirect("/login");
+});
+
 
 module.exports = { authenticationRouter };
